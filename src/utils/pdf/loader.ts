@@ -1,17 +1,31 @@
-import pdf from "pdf-parse";
-import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
+// // src/utils/pdfLoader.ts
 
-// ดึงข้อความจาก PDF
-export async function extractTextFromPDF(buffer: Buffer): Promise<string> {
-  const data = await pdf(buffer);
-  return data.text;
-}
+// import path from "path";
+// import fs from "fs";
+// import pdf from "pdf-parse";
 
-// แบ่งข้อความเป็นส่วนย่อย
-export async function splitText(text: string) {
-  const splitter = new RecursiveCharacterTextSplitter({
-    chunkSize: 1000,
-    chunkOverlap: 200,
-  });
-  return splitter.createDocuments([text]);
-}
+// interface PdfData {
+//   text: string;
+// }
+
+// export async function loadPDFContent(): Promise<string> {
+//   try {
+//     // ตั้งค่า path ให้ถูกต้อง
+//     const pdfPath = path.join(process.cwd(), "public", "pea_1.pdf");
+
+//     // ตรวจสอบการมีอยู่ของไฟล์
+//     if (!fs.existsSync(pdfPath)) {
+//       throw new Error(`PDF file not found at: ${pdfPath}`);
+//     }
+
+//     // Dynamic import สำหรับ pdf-parse
+//     const { default: pdf } = await import("pdf-parse");
+//     const fileBuffer = fs.readFileSync(pdfPath);
+//     const data: PdfData = await pdf(fileBuffer);
+
+//     return data.text;
+//   } catch (error) {
+//     console.error("PDF Loader Error:", error);
+//     return "";
+//   }
+// }

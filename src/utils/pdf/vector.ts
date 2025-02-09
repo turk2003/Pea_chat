@@ -1,16 +1,15 @@
-import { HuggingFaceTransformersEmbeddings } from "@langchain/community/embeddings/huggingface_transformers";
-import { FaissStore } from "@langchain/community/vectorstores/faiss";
-import { Document } from "@langchain/core/documents";
+// import { HNSWLib } from "@langchain/community/vectorstores/hnswlib";
+// import { HuggingFaceInferenceEmbeddings } from "@langchain/community/embeddings/hf";
 
-export async function createVectorStore(docs: Document[]) {
-  const embeddings = new HuggingFaceTransformersEmbeddings({
-    // ใช้ model แทน modelName
-    model: "sentence-transformers/paraphrase-multilingual-mpnet-base-v2",
+// export const createVectorStore = async (texts: string[]) => {
+//   const embeddings = new HuggingFaceInferenceEmbeddings({
+//     apiKey: process.env.HUGGINGFACE_API_KEY!,
+//     model: "sentence-transformers/all-mpnet-base-v2",
+//   });
 
-    // ตัวเลือกเพิ่มเติม (ถ้าต้องการ)
-    maxConcurrency: 5, // จำนวนการเรียกพร้อมกัน
-    maxRetries: 3, // จำนวนครั้งที่ลองใหม่
-  });
-
-  return FaissStore.fromDocuments(docs, embeddings);
-}
+//   return HNSWLib.fromTexts(
+//     texts,
+//     texts.map((_, i) => ({ id: i })),
+//     embeddings
+//   );
+// };
