@@ -7,19 +7,18 @@ import {
   HumanMessage,
   AIMessage,
 } from "@langchain/core/messages";
+
 import { systemPrompt } from "@/utils/prompts";
 import { MODEL_NAME, TEMPERATURE, MAX_TOKENS, topP } from "@/utils/constants";
 import { Message } from "@/types";
 import pdf from "pdf-parse";
 import fs from "fs";
 import path from "path";
-// import { loadPDFContent } from "@/utils/pdf/loader";
+
 async function loadPDFContent() {
   const pdfPath = path.join(process.cwd(), "public", "pea_1.pdf");
-  // const pdfPath =
-  //   "C:Users\turkmOneDriveเดสก์ท็อปdevpea_chat\frontendpea-chatpublicpea_1.pdf";
+
   try {
-    // Dynamic import เพื่อป้องกันปัญหาใน build process
     const { default: pdf } = await import("pdf-parse");
     console.log("PDF file path:", pdfPath);
     if (!fs.existsSync(pdfPath)) {

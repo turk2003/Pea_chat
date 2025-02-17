@@ -11,7 +11,7 @@
   "dependencies": {
     "@huggingface/inference": "^2.8.1",
     "@huggingface/transformers": "^3.3.2",
-    "@langchain/community": "^0.3.27",
+    "@langchain/community": "^0.3.29",
     "@langchain/core": "^0.3.36",
     "@langchain/openai": "^0.3.17",
     "@langchain/textsplitters": "^0.1.0",
