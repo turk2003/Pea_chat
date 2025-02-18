@@ -14,7 +14,9 @@ import { Message } from "@/types";
 import pdf from "pdf-parse";
 import fs from "fs";
 import path from "path";
-
+import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
+import { HuggingFaceInferenceEmbeddings } from "@langchain/community/embeddings/hf";
+import { MemoryVectorStore } from "langchain/vectorstores/memory";
 async function loadPDFContent() {
   const pdfPath = path.join(process.cwd(), "public", "pea_1.pdf");
 
@@ -37,15 +39,34 @@ async function loadPDFContent() {
 }
 
 // โหลดเนื้อหา PDF เมื่อเซิร์ฟเวอร์เริ่มต้น
-const pdfContentPromise = loadPDFContent();
+// const pdfContentPromise = loadPDFContent();
 
-export async function POST(req: Request) {
-  try {
-    const { messages }: { messages: Message[] } = await req.json();
-    const pdfContent = await pdfContentPromise; // ใช้ข้อมูล PDF ที่โหลดไว้
+export async function createRAGChain(pdfContent: string) {
+  // 1. Split text into chunks
+  const textSplitter = new RecursiveCharacterTextSplitter({
+    chunkSize: 1000,
+    chunkOverlap: 200,
+  });
+  const chunks = await textSplitter.createDocuments([pdfContent]);
 
-    // สร้างโมเดล Hugging Face
-    const chat = new HuggingFaceInference({
+  // 2. Create embeddings and vector store
+  const embeddings = new HuggingFaceInferenceEmbeddings({
+    apiKey: process.env.HUGGINGFACE_API_KEY,
+  });
+  const vectorStore = await MemoryVectorStore.fromDocuments(chunks, embeddings);
+
+  return async function generateResponse(
+    messages: Message[],
+    latestQuestion: string
+  ) {
+    // 3. Retrieve relevant chunks
+    const relevantDocs = await vectorStore.similaritySearch(latestQuestion, 3);
+    const relevantContent = relevantDocs
+      .map((doc) => doc.pageContent)
+      .join("\n");
+
+    // 4. Create LLM instance
+    const llm = new HuggingFaceInference({
       model: MODEL_NAME,
       temperature: TEMPERATURE,
       maxTokens: MAX_TOKENS,
@@ -54,45 +75,63 @@ export async function POST(req: Request) {
       apiKey: process.env.HUGGINGFACE_API_KEY,
     });
 
-    // สร้าง chat history
-    const chatHistory = new ChatMessageHistory();
-
-    // รวม System Prompt กับเนื้อหา PDF
-    const combinedSystemPrompt = `${systemPrompt}\n\nข้อมูลจากเอกสารภายใน:\n${pdfContent}`;
-    await chatHistory.addMessage(new SystemMessage(combinedSystemPrompt));
-
-    // เพิ่มประวัติการสนทนา
-    for (const msg of messages.slice(0, -1)) {
-      if (msg.role === "user") {
-        await chatHistory.addMessage(new HumanMessage(msg.content));
-      } else {
-        await chatHistory.addMessage(new AIMessage(msg.content));
-      }
-    }
-
-    // สร้าง memory
+    // 5. Setup conversation history with system prompt
     const memory = new BufferMemory({
-      chatHistory,
       returnMessages: true,
       memoryKey: "history",
       inputKey: "input",
       outputKey: "response",
     });
 
-    // สร้าง chain
+    // Add system prompt first
+    await memory.chatHistory.addMessage(new SystemMessage(systemPrompt));
+
+    // Add conversation history
+    for (const msg of messages.slice(0, -1)) {
+      await memory.chatHistory.addMessage(
+        msg.role === "user"
+          ? new HumanMessage(msg.content)
+          : new AIMessage(msg.content)
+      );
+    }
+
+    // 6. Create chain
     const chain = new ConversationChain({
-      llm: chat,
+      llm: llm,
       memory: memory,
       verbose: true,
     });
 
-    // ส่งข้อความล่าสุดเข้าไป
-    const result = await chain.call({
-      input: messages[messages.length - 1].content,
-    });
+    // 7. Generate response with combined context
+    const prompt = `
+      System Instructions: ${systemPrompt}
 
-    const rawResponse = result.response || "";
-    const cleanedResponse = rawResponse
+      Relevant Context:
+      ${relevantContent}
+      
+      User Question: ${latestQuestion}
+      
+      Please provide a response that takes into account both the system instructions and the relevant context.
+    `;
+
+    return await chain.call({ input: prompt });
+  };
+}
+
+// api/chat/route.ts
+export async function POST(req: Request) {
+  try {
+    const { messages }: { messages: Message[] } = await req.json();
+    const pdfContent = await loadPDFContent();
+
+    // Create RAG chain with PDF content
+    const generateResponse = await createRAGChain(pdfContent);
+
+    // Get response using the chain
+    const latestQuestion = messages[messages.length - 1].content;
+    const result = await generateResponse(messages, latestQuestion);
+
+    const cleanedResponse = result.response
       .split("\nHuman:")[0]
       .trim()
       .replace(/(\n{2,})/g, "\n")
