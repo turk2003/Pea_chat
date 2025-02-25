@@ -52,6 +52,7 @@ export async function createRAGChain(pdfContent: string) {
   // 2. Create embeddings and vector store
   const embeddings = new HuggingFaceInferenceEmbeddings({
     apiKey: process.env.HUGGINGFACE_API_KEY,
+    model: "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2", // หรือ model ที่เหมาะสมกับภาษาไทย
   });
   const vectorStore = await MemoryVectorStore.fromDocuments(chunks, embeddings);
 
@@ -135,7 +136,11 @@ export async function POST(req: Request) {
       .split("\nHuman:")[0]
       .trim()
       .replace(/(\n{2,})/g, "\n")
-      .replace(/Human:$/, "");
+      .replace(/Human:$/, "")
+      .replace(/<[^>]+>/g, "") // ลบ HTML tags
+      .replace(/(ตอบ|คำตอบ):\s*/i, "") // ลบคำขึ้นต้น
+      .replace(/\n{2,}/g, "\n")
+      .trim();
 
     return NextResponse.json({
       response: cleanedResponse,
