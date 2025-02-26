@@ -41,7 +41,7 @@ async function loadPDFContent() {
 // โหลดเนื้อหา PDF เมื่อเซิร์ฟเวอร์เริ่มต้น
 // const pdfContentPromise = loadPDFContent();
 
-export async function createRAGChain(pdfContent: string) {
+async function createRAGChain(pdfContent: string) {
   // 1. Split text into chunks
   const textSplitter = new RecursiveCharacterTextSplitter({
     chunkSize: 1000,
